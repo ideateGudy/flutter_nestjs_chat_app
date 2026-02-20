@@ -21,6 +21,17 @@ interface MongoError extends Error {
 export class AllExceptionsFilter implements ExceptionFilter {
   private readonly logger = new Logger(AllExceptionsFilter.name);
 
+  private getErrorMessage(status: number): string {
+    const statusMap: Record<number, string> = {
+      [HttpStatus.BAD_REQUEST]: 'Bad Request',
+      [HttpStatus.UNAUTHORIZED]: 'Unauthorized',
+      [HttpStatus.FORBIDDEN]: 'Forbidden',
+      [HttpStatus.NOT_FOUND]: 'Not Found',
+      [HttpStatus.CONFLICT]: 'Conflict',
+    };
+    return statusMap[status] || 'Internal Server Error';
+  }
+
   catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
@@ -82,17 +93,25 @@ export class AllExceptionsFilter implements ExceptionFilter {
           : null,
     });
 
+    // Handle custom exception format (already has statusCode, message, error, timestamp)
+    if (
+      typeof message === 'object' &&
+      message !== null &&
+      'statusCode' in message &&
+      'error' in message
+    ) {
+      return response.status(status).json(message);
+    }
+
     response.status(status).json({
       statusCode: status,
-      timestamp: new Date().toISOString(),
-      method: request.method,
-      stack: isProduction
-        ? undefined
-        : exception instanceof Error
-          ? exception.stack
-          : null,
-      path: request.url,
       message,
+      error: this.getErrorMessage(status),
+      timestamp: new Date().toISOString(),
+      ...(request.method && { method: request.method }),
+      ...(request.url && { path: request.url }),
+      ...(!isProduction &&
+        exception instanceof Error && { stack: exception.stack }),
     });
   }
 }
