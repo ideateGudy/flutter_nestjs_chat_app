@@ -9,7 +9,12 @@ import {
 } from '@nestjs/common';
 import type { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
 
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -51,6 +56,7 @@ export class AuthController {
   @Post('logout')
   @UseGuards(JwtAuthGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Logout user' })
   @ApiResponse({ status: 200, description: 'User logged out successfully' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
@@ -62,6 +68,7 @@ export class AuthController {
   @Post('refresh')
   @UseGuards(RefreshTokenGuard)
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth('JWT-refresh')
   @ApiOperation({ summary: 'Refresh access token' })
   @ApiResponse({
     status: 200,
