@@ -35,7 +35,7 @@ async function bootstrap() {
   );
 
   // Global prefix
-  app.setGlobalPrefix('api');
+  app.setGlobalPrefix('api/v1');
 
   // Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
@@ -45,10 +45,11 @@ async function bootstrap() {
 
   // Enable swagger docs
   const config = new DocumentBuilder()
-    .setTitle('E-commerce API')
-    .setDescription('API documentation for the E-commerce application')
+    .setTitle('Chat API')
+    .setDescription('API documentation for the Chat application')
     .setVersion('1.0')
     .addTag('Auth', 'Authentication related endpoints')
+    .addTag('Chat', 'Chat related endpoints')
     .addBearerAuth(
       {
         type: 'http',
