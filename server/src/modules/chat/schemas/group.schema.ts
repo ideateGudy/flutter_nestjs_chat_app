@@ -43,5 +43,4 @@ export const GroupSchema = SchemaFactory.createForClass(Group);
 
 // indexes for common queries
 GroupSchema.index({ members: 1, createdAt: -1 });
-GroupSchema.index({ createdBy: 1 });
 GroupSchema.index({ isActive: 1 });
