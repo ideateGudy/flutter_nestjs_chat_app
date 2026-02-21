@@ -76,12 +76,3 @@ export class AddGroupMemberDto {
   @Type(() => mongoose.Types.ObjectId)
   userId: mongoose.Types.ObjectId;
 }
-
-export class RemoveGroupMemberDto {
-  @ApiProperty({
-    description: 'User ID to remove from the group',
-  })
-  @IsMongoId()
-  @Type(() => mongoose.Types.ObjectId)
-  userId: mongoose.Types.ObjectId;
-}
