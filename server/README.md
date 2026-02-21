@@ -7,7 +7,7 @@ A production-ready **NestJS-based real-time chat API** with JWT authentication, 
 - **Framework:** NestJS 11.x with TypeScript
 - **Database:** MongoDB with Mongoose ODM
 - **Authentication:** JWT with refresh tokens (15m/7d expiration)
-- **Real-time:** Socket.io configured (ready for WebSocket implementation)
+- **Real-time:** Socket.io on a dedicated port `3002` with namespace `/chat`
 - **API Documentation:** Swagger/OpenAPI integrated
 - **Architecture:** Modular design (Auth, Chat, Users modules)
 - **API Versioning:** `/api/v1/` prefix
@@ -457,7 +457,8 @@ import io from 'socket.io-client';
 
 // Connect to WebSocket with JWT access token
 // accessToken is obtained from /api/v1/auth/login or /api/v1/auth/refresh
-const socket = io('http://localhost:3000', {
+// WebSocket runs on a SEPARATE port (3002) from the REST API (3000)
+const socket = io('http://localhost:3002/chat', {
   auth: { token: accessToken }
 });
 
@@ -529,6 +530,7 @@ socket.on('userOffline', (data) => {
 
 - **Swagger UI:** <http://localhost:3000/api/docs>
 - **API Health:** <http://localhost:3000/>
+- **WebSocket:** `ws://localhost:3002/chat`
 
 ## � Project Dependencies
 
@@ -851,6 +853,6 @@ This project is licensed under the MIT License
 ---
 
 **Status:** ✅ Production Ready  
-**Last Updated:** February 20, 2026  
+**Last Updated:** February 21, 2026  
 **API Version:** v1  
 **Maintenance:** Active Development
