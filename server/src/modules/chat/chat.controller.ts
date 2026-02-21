@@ -3,10 +3,14 @@ import {
   Post,
   Get,
   Put,
+  Delete,
   Body,
   Param,
+  Query,
   UseGuards,
+  Req,
 } from '@nestjs/common';
+import type { RequestWithUser } from 'src/common/interfaces/request-with-user.interface';
 import {
   ApiTags,
   ApiOperation,
@@ -18,6 +22,11 @@ import { ChatService } from './chat.service';
 import { CreateMessageDto } from './dto/create-message.dto';
 import { FetchChatMessagesDto } from './dto/fetch-chat-messages.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
+import {
+  CreateGroupDto,
+  UpdateGroupDto,
+  AddGroupMemberDto,
+} from './dto/group.dto';
 import { UserLastSeenUpdate } from './chat.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { MessageStatus } from './schemas/chat.schema';
@@ -29,6 +38,8 @@ import mongoose from 'mongoose';
 @ApiBearerAuth('JWT-auth')
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
+
+  // ==================== MESSAGE ENDPOINTS ====================
 
   // Create a new message
   @Post('message')
@@ -42,7 +53,10 @@ export class ChatController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createMessage(
     @Body() createMessageDto: CreateMessageDto,
+    @Req() req: RequestWithUser,
   ): Promise<MessageResponseDto> {
+    // Always use the authenticated user as sender – never trust the request body
+    createMessageDto.sender = new mongoose.Types.ObjectId(req.user.sub);
     return this.chatService.createMessage(createMessageDto);
   }
 
@@ -111,6 +125,8 @@ export class ChatController {
       new mongoose.Types.ObjectId(partnerId),
     );
   }
+
+  // ==================== USER PRESENCE ENDPOINTS ====================
 
   // Update user last seen timestamp
   @Put('user/:userId/last-seen')
@@ -241,7 +257,7 @@ export class ChatController {
 
   // Get chat rooms for a user
   @Get('rooms/:userId')
-  @ApiOperation({ summary: 'Get all chat rooms for a user' })
+  @ApiOperation({ summary: 'Get all private chat rooms for a user' })
   @ApiParam({
     name: 'userId',
     required: true,
@@ -254,5 +270,193 @@ export class ChatController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getChatRooms(@Param('userId') userId: string) {
     return this.chatService.chatRoom(new mongoose.Types.ObjectId(userId));
+  }
+
+  // ==================== GROUP ENDPOINTS ====================
+
+  // Create a new group
+  @Post('group')
+  @ApiOperation({ summary: 'Create a new group chat' })
+  @ApiResponse({
+    status: 201,
+    description: 'Group created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid group data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async createGroup(
+    @Body() createGroupDto: CreateGroupDto,
+    @Req() req: RequestWithUser,
+  ) {
+    const userId = req.user.sub;
+    return this.chatService.createGroup(
+      createGroupDto,
+      new mongoose.Types.ObjectId(userId),
+    );
+  }
+
+  // Get group details
+  @Get('group/:groupId')
+  @ApiOperation({ summary: 'Get group details' })
+  @ApiParam({
+    name: 'groupId',
+    required: true,
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Group details retrieved successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getGroupDetails(@Param('groupId') groupId: string) {
+    return this.chatService.getGroupDetails(
+      new mongoose.Types.ObjectId(groupId),
+    );
+  }
+
+  // Update group details
+  @Put('group/:groupId')
+  @ApiOperation({ summary: 'Update group details' })
+  @ApiParam({
+    name: 'groupId',
+    required: true,
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Group updated successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async updateGroup(
+    @Param('groupId') groupId: string,
+    @Body() updateGroupDto: UpdateGroupDto,
+  ) {
+    return this.chatService.updateGroup(
+      new mongoose.Types.ObjectId(groupId),
+      updateGroupDto,
+    );
+  }
+
+  // Add member to group
+  @Post('group/:groupId/member')
+  @ApiOperation({ summary: 'Add member to group' })
+  @ApiParam({
+    name: 'groupId',
+    required: true,
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Member added successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async addGroupMember(
+    @Param('groupId') groupId: string,
+    @Body() addGroupMemberDto: AddGroupMemberDto,
+  ) {
+    return this.chatService.addGroupMember(
+      new mongoose.Types.ObjectId(groupId),
+      addGroupMemberDto.userId,
+    );
+  }
+
+  // Remove member from group
+  @Delete('group/:groupId/member/:userId')
+  @ApiOperation({ summary: 'Remove member from group' })
+  @ApiParam({
+    name: 'groupId',
+    required: true,
+    description: 'Group ID',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'User ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Member removed successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async removeGroupMember(
+    @Param('groupId') groupId: string,
+    @Param('userId') userId: string,
+  ) {
+    return this.chatService.removeGroupMember(
+      new mongoose.Types.ObjectId(groupId),
+      new mongoose.Types.ObjectId(userId),
+    );
+  }
+
+  // Get all groups for a user
+  @Get('user/:userId/groups')
+  @ApiOperation({ summary: 'Get all groups for a user' })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'User ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'User groups retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getUserGroups(@Param('userId') userId: string) {
+    return this.chatService.getUserGroups(new mongoose.Types.ObjectId(userId));
+  }
+
+  // Get group chat rooms with latest messages
+  @Get('group-rooms/:userId')
+  @ApiOperation({
+    summary: 'Get group chat rooms for a user with latest messages',
+  })
+  @ApiParam({
+    name: 'userId',
+    required: true,
+    description: 'User ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Group chat rooms retrieved successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async getGroupChatRooms(@Param('userId') userId: string) {
+    return this.chatService.getGroupChatRooms(
+      new mongoose.Types.ObjectId(userId),
+    );
+  }
+
+  // Delete group
+  @Delete('group/:groupId')
+  @ApiOperation({ summary: 'Delete a group' })
+  @ApiParam({
+    name: 'groupId',
+    required: true,
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Group deleted successfully',
+  })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async deleteGroup(@Param('groupId') groupId: string) {
+    await this.chatService.deleteGroup(new mongoose.Types.ObjectId(groupId));
+    return { message: 'Group deleted successfully' };
+  }
+
+  // Search groups by name
+  @Get('groups/search')
+  @ApiOperation({ summary: 'Search groups by name' })
+  @ApiResponse({
+    status: 200,
+    description: 'Groups found successfully',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async searchGroups(@Query('q') searchQuery: string) {
+    return this.chatService.searchGroups(searchQuery);
   }
 }
