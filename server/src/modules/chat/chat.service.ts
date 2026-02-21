@@ -1,5 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { NotFoundException } from 'src/common/exceptions/http-exceptions';
+import { randomBytes } from 'crypto';
+import {
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from 'src/common/exceptions/http-exceptions';
 import { Chat, ChatType, MessageStatus } from './schemas/chat.schema';
 import { Group } from './schemas/group.schema';
 import mongoose, { Model } from 'mongoose';
@@ -448,6 +453,11 @@ export class ChatService {
 
   // ==================== GROUP CHAT OPERATIONS ====================
 
+  // Generate a random 10-character alphanumeric invite code
+  private generateInviteCode(): string {
+    return randomBytes(8).toString('hex').slice(0, 10).toUpperCase();
+  }
+
   // Create a new group
   async createGroup(
     createGroupDto: CreateGroupDto,
@@ -464,6 +474,7 @@ export class ChatService {
       members: [createdBy, ...members], // Add creator + other members
       admins: [createdBy],
       isActive: true,
+      inviteCode: this.generateInviteCode(),
     };
 
     const createdGroup = new this.groupModel(groupObject);
@@ -473,6 +484,70 @@ export class ChatService {
       `Created group: ${groupName} with ID: ${String(savedGroup._id)}`,
     );
     return savedGroup.toObject();
+  }
+
+  // Join a group via invite code
+  async joinGroupByInviteCode(
+    userId: mongoose.Types.ObjectId,
+    inviteCode: string,
+  ): Promise<any> {
+    const group = await this.groupModel.findOne({ inviteCode, isActive: true });
+
+    if (!group) {
+      throw new NotFoundException('Invalid or expired invite link');
+    }
+
+    const alreadyMember = group.members.some((m) =>
+      new mongoose.Types.ObjectId(m).equals(userId),
+    );
+
+    if (alreadyMember) {
+      throw new BadRequestException('You are already a member of this group');
+    }
+
+    const updated = await this.groupModel
+      .findByIdAndUpdate(
+        group._id,
+        { $addToSet: { members: userId } },
+        { new: true },
+      )
+      .populate('members', 'username email avatar isOnline lastSeen')
+      .populate('createdBy', 'username email avatar');
+
+    Logger.log(
+      `User ${userId.toString()} joined group ${String(group._id)} via invite link`,
+    );
+    return updated;
+  }
+
+  // Revoke and regenerate a group's invite code (admin only)
+  async revokeGroupInviteCode(
+    groupId: mongoose.Types.ObjectId,
+    requestingUserId: mongoose.Types.ObjectId,
+  ): Promise<{ inviteCode: string }> {
+    const group = await this.groupModel.findById(groupId);
+
+    if (!group) {
+      throw new NotFoundException('Group not found');
+    }
+
+    const isAdmin = group.admins.some((a) =>
+      new mongoose.Types.ObjectId(a).equals(requestingUserId),
+    );
+
+    if (!isAdmin) {
+      throw new ForbiddenException(
+        'Only group admins can revoke the invite link',
+      );
+    }
+
+    const newCode = this.generateInviteCode();
+    await this.groupModel.findByIdAndUpdate(groupId, {
+      inviteCode: newCode,
+    });
+
+    Logger.log(`Invite code revoked for group ${groupId.toString()}`);
+    return { inviteCode: newCode };
   }
 
   // Get group details
