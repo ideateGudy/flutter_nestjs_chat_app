@@ -84,7 +84,7 @@ async function bootstrap() {
       tagsSorter: 'alpha',
       operationsSorter: 'alpha',
     },
-    customSiteTitle: 'E-commerce API Documentation',
+    customSiteTitle: 'Chat Application API Documentation',
     customfavIcon: 'https://nestjs.com/img/logo-small.svg',
     customCss: `
       .swagger-ui .topbar {
