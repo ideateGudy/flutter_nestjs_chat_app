@@ -9,6 +9,7 @@ import { JwtService } from '@nestjs/jwt';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { randomBytes } from 'crypto';
+import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
@@ -83,12 +84,13 @@ export class AuthService {
     };
   }
 
-  // Update refresh token in the database
+  // Update refresh token in the database (stored as bcrypt hash)
   async updateRefreshToken(
     userId: string,
     refreshToken: string,
   ): Promise<void> {
-    await this.userModel.findByIdAndUpdate(userId, { refreshToken });
+    const hashed = await bcrypt.hash(refreshToken, 10);
+    await this.userModel.findByIdAndUpdate(userId, { refreshToken: hashed });
   }
 
   // Refresh tokens
