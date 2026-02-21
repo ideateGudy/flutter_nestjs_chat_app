@@ -35,7 +35,7 @@ async function bootstrap() {
   );
 
   // Global prefix
-  app.setGlobalPrefix('api/v1');
+  app.setGlobalPrefix('api/v1', { exclude: ['/'] });
 
   // Socket.IO
   app.useWebSocketAdapter(new IoAdapter(app));
