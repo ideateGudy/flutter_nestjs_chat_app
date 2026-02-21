@@ -1,8 +1,14 @@
 //create message dto
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEnum, IsMongoId, IsNotEmpty, IsString } from 'class-validator';
+import {
+  IsEnum,
+  IsMongoId,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { MessageStatus } from '../schemas/chat.schema';
+import { ChatType, MessageStatus } from '../schemas/chat.schema';
 import mongoose from 'mongoose';
 
 export class CreateMessageDto {
@@ -11,28 +17,51 @@ export class CreateMessageDto {
   @IsString({ message: 'Chat room ID must be a string' })
   chatRoomId: string;
 
-  @ApiProperty({ description: 'Unique message ID', example: 'msg12345' })
-  @IsNotEmpty({ message: 'Message ID is required' })
+  @ApiProperty({
+    description: 'Unique message ID (auto-generated if not provided)',
+    example: 'msg12345',
+    required: false,
+  })
+  @IsOptional()
   @IsString({ message: 'Message ID must be a string' })
-  messageId: string;
+  messageId?: string;
 
   @ApiProperty({
-    description: 'Sender user ID',
-    example: '507f1f77bcf86cd799439011',
+    description: 'Chat type (private or group)',
+    example: 'private',
+    enum: ['private', 'group'],
   })
-  @IsNotEmpty({ message: 'Sender user ID is required' })
+  @IsEnum(ChatType)
+  chatType: ChatType;
+
+  @ApiProperty({
+    description: 'Sender user ID (automatically set from JWT token)',
+    example: '507f1f77bcf86cd799439011',
+    required: false,
+  })
+  @IsOptional()
   @IsMongoId({ message: 'Sender user ID must be a valid MongoDB ID' })
   @Type(() => mongoose.Types.ObjectId)
-  sender: mongoose.Types.ObjectId;
+  sender?: mongoose.Types.ObjectId;
 
   @ApiProperty({
-    description: 'Receiver user ID',
+    description: 'Receiver user ID (for private messages)',
     example: '507f1f77bcf86cd799439012',
+    required: false,
   })
-  @IsNotEmpty({ message: 'Receiver user ID is required' })
+  @IsOptional()
   @IsMongoId({ message: 'Receiver user ID must be a valid MongoDB ID' })
   @Type(() => mongoose.Types.ObjectId)
-  receiver: mongoose.Types.ObjectId;
+  receiver?: mongoose.Types.ObjectId;
+
+  @ApiProperty({
+    description: 'Group ID (for group messages)',
+    required: false,
+  })
+  @IsOptional()
+  @IsMongoId({ message: 'Group ID must be a valid MongoDB ID' })
+  @Type(() => mongoose.Types.ObjectId)
+  groupId?: mongoose.Types.ObjectId;
 
   @ApiProperty({
     description: 'Message content',
@@ -43,13 +72,20 @@ export class CreateMessageDto {
   message: string;
 
   @ApiProperty({
+    description: 'Message attachment URL',
+    required: false,
+  })
+  @IsOptional()
+  @IsString()
+  attachment?: string;
+
+  @ApiProperty({
     description: 'Message status',
     example: 'sent',
     enum: ['sent', 'delivered', 'read'],
+    required: false,
   })
-  @IsEnum(MessageStatus, {
-    message:
-      'Message status must be one of the allowed values ( sent, delivered, read )',
-  })
-  status: MessageStatus;
+  @IsOptional()
+  @IsEnum(MessageStatus)
+  status?: MessageStatus;
 }
