@@ -14,8 +14,10 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private configService: ConfigService,
   ) {
-    const secretOrKey =
-      configService.get<string>('JWT_SECRET') || 'fallback-secret';
+    const secretOrKey = configService.get<string>('JWT_SECRET');
+    if (!secretOrKey) {
+      throw new Error('JWT_SECRET environment variable is not set');
+    }
 
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
