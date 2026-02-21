@@ -8,6 +8,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { UnauthorizedException } from 'src/common/exceptions/http-exceptions';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as bcrypt from 'bcrypt';
 import { User, UserDocument } from '../../../modules/users/schemas/user.schema';
 
 @Injectable()
@@ -19,8 +20,10 @@ export class RefreshTokenStrategy extends PassportStrategy(
     @InjectModel(User.name) private userModel: Model<UserDocument>,
     private configService: ConfigService,
   ) {
-    const secretOrKey =
-      configService.get<string>('JWT_REFRESH_SECRET') || 'fallback-secret';
+    const secretOrKey = configService.get<string>('JWT_REFRESH_SECRET');
+    if (!secretOrKey) {
+      throw new Error('JWT_REFRESH_SECRET environment variable is not set');
+    }
 
     const options: StrategyOptionsWithRequest = {
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -61,7 +64,8 @@ export class RefreshTokenStrategy extends PassportStrategy(
       );
     }
 
-    if (refreshToken !== user.refreshToken) {
+    const isMatch = await bcrypt.compare(refreshToken, user.refreshToken);
+    if (!isMatch) {
       Logger.log('Refresh token mismatch');
       throw new UnauthorizedException('Refresh token mismatch');
     }
