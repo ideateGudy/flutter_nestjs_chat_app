@@ -37,6 +37,9 @@ export class Group {
 
   @Prop({ default: true })
   isActive?: boolean;
+
+  @Prop({ type: String, unique: true, sparse: true })
+  inviteCode?: string;
 }
 
 export const GroupSchema = SchemaFactory.createForClass(Group);
