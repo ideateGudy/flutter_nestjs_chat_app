@@ -459,4 +459,62 @@ export class ChatController {
   async searchGroups(@Query('q') searchQuery: string) {
     return this.chatService.searchGroups(searchQuery);
   }
+
+  // ==================== INVITE LINK ENDPOINTS ====================
+
+  // Join a group via invite code
+  @Post('group/join/:inviteCode')
+  @ApiOperation({ summary: 'Join a group using an invite link' })
+  @ApiParam({
+    name: 'inviteCode',
+    required: true,
+    description: 'Group invite code',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Successfully joined the group',
+  })
+  @ApiResponse({ status: 400, description: 'Already a member' })
+  @ApiResponse({ status: 404, description: 'Invalid or expired invite link' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async joinGroupByInviteCode(
+    @Param('inviteCode') inviteCode: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.chatService.joinGroupByInviteCode(
+      new mongoose.Types.ObjectId(req.user.sub),
+      inviteCode,
+    );
+  }
+
+  // Revoke / regenerate a group's invite code (admin only)
+  @Put('group/:groupId/invite-code/revoke')
+  @ApiOperation({
+    summary: 'Revoke and regenerate the group invite link (admin only)',
+  })
+  @ApiParam({
+    name: 'groupId',
+    required: true,
+    description: 'Group ID',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'New invite code generated',
+    schema: { example: { inviteCode: 'A1B2C3D4E5' } },
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Only admins can revoke invite links',
+  })
+  @ApiResponse({ status: 404, description: 'Group not found' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async revokeGroupInviteCode(
+    @Param('groupId') groupId: string,
+    @Req() req: RequestWithUser,
+  ) {
+    return this.chatService.revokeGroupInviteCode(
+      new mongoose.Types.ObjectId(groupId),
+      new mongoose.Types.ObjectId(req.user.sub),
+    );
+  }
 }
