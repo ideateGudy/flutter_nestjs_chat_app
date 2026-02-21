@@ -16,20 +16,31 @@ export class FetchChatMessagesDto {
   @ApiProperty({
     description: 'Sender user ID',
     example: '507f1f77bcf86cd799439011',
+    required: false,
   })
-  @IsNotEmpty({ message: 'Sender user ID is required' })
+  @IsOptional()
   @IsMongoId({ message: 'Sender user ID must be a valid MongoDB ID' })
   @Type(() => mongoose.Types.ObjectId)
-  senderId: mongoose.Types.ObjectId;
+  senderId?: mongoose.Types.ObjectId;
 
   @ApiProperty({
-    description: 'Receiver user ID',
+    description: 'Receiver user ID (for private messages)',
     example: '507f1f77bcf86cd799439012',
+    required: false,
   })
-  @IsNotEmpty({ message: 'Receiver user ID is required' })
+  @IsOptional()
   @IsMongoId({ message: 'Receiver user ID must be a valid MongoDB ID' })
   @Type(() => mongoose.Types.ObjectId)
-  receiverId: mongoose.Types.ObjectId;
+  receiverId?: mongoose.Types.ObjectId;
+
+  @ApiProperty({
+    description: 'Group ID (for group messages)',
+    required: false,
+  })
+  @IsOptional()
+  @IsMongoId({ message: 'Group ID must be a valid MongoDB ID' })
+  @Type(() => mongoose.Types.ObjectId)
+  groupId?: mongoose.Types.ObjectId;
 
   @ApiProperty({ description: 'Page number for pagination', example: 1 })
   @IsOptional()
